@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Contact;
+use App\Models\User;
+use App\Notifications\NewContactMessage;
 use Illuminate\Http\Request;
 
 class ContactController extends Controller
@@ -19,17 +21,28 @@ class ContactController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required',
+            'name' => 'required|string|max:255',
             'email' => 'required|email',
-            'message' => 'required',
-            'telephone' => 'sometimes'
+            'telephone' => 'required|string|max:255', 
+            'message' => 'required|string'
         ]);
 
-        $message = Contact::create($request->all());
+        $contact = Contact::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'telephone' => $request->telephone,
+            'message' => $request->message
+        ]);
+
+        // Notifier l'administrateur
+        $admin = User::where('role', 'super_admin')->first();
+        if ($admin) {
+            $admin->notify(new NewContactMessage($contact));
+        }
 
         return response()->json([
             'message' => 'Message envoyé avec succès',
-            'data' => $message
+            'data' => $contact
         ], 201);
     }
 

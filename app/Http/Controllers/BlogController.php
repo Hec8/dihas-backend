@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Blog;
+use App\Notifications\ArticleNeedsRevision;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use HTMLPurifier;
 use HTMLPurifier_Config;
+use Illuminate\Support\Str;
 
 $config = HTMLPurifier_Config::createDefault();
 $purifier = new HTMLPurifier($config);
@@ -24,7 +26,8 @@ class BlogController extends Controller
 
     public function indextwo()
     {
-        $articles = Blog::all();
+        $articles = Blog::where('statut', 'validé') // Seulement les articles validés
+                       ->get();
         $articles = $articles->map(function($article) {
             if ($article->image) {
                 
@@ -67,7 +70,14 @@ public function show($id)
     ]);
 }
 
-    public function blogDetail($slug)
+    /**
+     * Prévisualisation d'un article pour l'admin et le content creator
+     * Cette méthode permet de voir tous les articles, quel que soit leur statut
+     *
+     * @param  string  $slug
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function blogPreview($slug)
     {
         $article = Blog::where('slug', $slug)->first();
 
@@ -75,6 +85,13 @@ public function show($id)
             return response()->json([
                 "message" => "Article non trouvé"
             ], 404);
+        }
+
+        // Vérifier si l'utilisateur est admin ou s'il est l'auteur de l'article
+        if (Auth::user()->role !== 'super_admin' && $article->writer !== Auth::user()->name) {
+            return response()->json([
+                "message" => "Non autorisé à voir cet article"
+            ], 403);
         }
 
         if ($article->image) {
@@ -241,6 +258,27 @@ public function show($id)
         return response()->json([
             "message" => "Statut de l'article mis à jour",
             "article" => $article
+        ]);
+    }
+
+    public function requestRevision(Request $request, $id)
+    {
+        $article = Blog::findOrFail($id);
+
+        $request->validate([
+            'revision_reason' => 'required|string'
+        ]);
+
+        $article->update([
+            'statut' => 'needs_revision',
+            'revision_reason' => $request->revision_reason
+        ]);
+
+        // Notifier l'auteur
+        $article->author->notify(new ArticleNeedsRevision($article, $request->revision_reason));
+
+        return response()->json([
+            'message' => 'Demande de révision envoyée'
         ]);
     }
 

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Newsletter;
+use App\Models\User;
+use App\Notifications\NewsletterSubscription;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Exists;
 
@@ -15,21 +17,25 @@ class NewsletterController extends Controller
     }
 
     public function store(Request $request)
-{
-    $request->validate([
-        'email' => 'required|email'
-    ]);
+    {
+        $request->validate([
+            'email' => 'required|email|unique:newsletters'
+        ]);
 
-    // Création dans la base de données
-    $abonne = Newsletter::create([
-        'email' => $request->email
-    ]);
+        $subscriber = Newsletter::create([
+            'email' => $request->email
+        ]);
 
-    return response()->json([
-        'message' => 'Merci pour votre inscription à notre newsletter !',
-        'Abonné' => $abonne
-    ]);
-}
+        // Notifier l'administrateur
+        $admin = User::where('role', 'super_admin')->first();
+        if ($admin) {
+            $admin->notify(new NewsletterSubscription($subscriber));
+        }
+
+        return response()->json([
+            'message' => 'Inscription réussie à la newsletter'
+        ]);
+    }
 
     public function destroy($id)
     {
