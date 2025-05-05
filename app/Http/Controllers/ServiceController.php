@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Service;
@@ -12,10 +12,20 @@ class ServiceController extends Controller
     /**
      * Display a listing of the resource.
      */
+    //visitors
     public function index()
     {
         $services = Service::where('is_active', true)->get();
         return response()->json($services);
+    }
+
+    //admins
+    public function index_two()
+    {
+        $services = Service::all();
+        return response()->json([
+            'Liste des services' => $services
+        ]);
     }
 
     /**
@@ -26,17 +36,31 @@ class ServiceController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
         ]);
 
-        $service = Service::create([
+        // Traitement de l'icone
+        $imageName = null;
+        if ($request->hasFile('icon')) {
+            $icon = $request->file('icon');
+            $imageName = time() . '.' . $icon->getClientOriginalExtension();
+            $icon->move(public_path('images/services'), $imageName);
+        }
+
+        $data = [
             'title' => $request->title,
             'content' => $request->content,
             'slug' => Str::slug($request->title),
-            'is_active' => $request->is_active ?? true
-        ]);
+            'is_active' => $request->is_active ?? true,
+            'icon' => $imageName ? '/images/services/' . $imageName : null,
+        ];
 
-        return response()->json($service, 201);
+        Service::create($data);
+
+        return response()->json([
+            'message' => 'Service créé avec succès'
+        ]);
     }
 
     /**
@@ -50,23 +74,48 @@ class ServiceController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Service $service)
-    {
-        $request->validate([
-            'title' => 'string|max:255',
-            'content' => 'string',
-            'is_active' => 'boolean'
-        ]);
 
-        $service->update([
-            'title' => $request->title ?? $service->title,
-            'content' => $request->content ?? $service->content,
-            'slug' => $request->title ? Str::slug($request->title) : $service->slug,
-            'is_active' => $request->is_active ?? $service->is_active
-        ]);
+public function update(Request $request, $id)
+{
+    $validated = $request->validate([
+        'title' => 'sometimes|required|string|max:255',
+        'content' => 'sometimes|required|string',
+        'is_active' => 'sometimes|boolean',
+        'icon' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+    ]);
 
-        return response()->json($service);
+    $service = Service::findOrFail($id);
+
+    // Mise à jour du slug si le titre change
+    if ($request->has('title') && $request->title !== $service->title) {
+        $validated['slug'] = Str::slug($request->title);
     }
+
+    // Gestion de l'icône
+    $imageName = null;
+    if ($request->hasFile('icon')) {
+        // Supprimer l'ancienne icône si elle existe
+        if ($service->icon) {
+            $oldImagePath = public_path($service->icon);
+            if (file_exists($oldImagePath)) {
+                unlink($oldImagePath);
+            }
+        }
+
+        // Enregistrer la nouvelle icône
+        $icon = $request->file('icon');
+        $imageName = time() . '.' . $icon->getClientOriginalExtension();
+        $icon->move(public_path('images/services'), $imageName);
+        $validated['icon'] = '/images/services/' . $imageName;
+    } else {
+        // Conserver l'icône existante si aucune nouvelle n'est fournie
+        $validated['icon'] = $service->icon;
+    }
+
+    $service->update($validated);
+
+    return response()->json($service);
+}
 
     /**
      * Remove the specified resource from storage.

@@ -13,7 +13,8 @@ class Service extends Model
         'title',
         'content',
         'slug',
-        'is_active'
+        'is_active',
+        'icon'
     ];
 
     protected $casts = [

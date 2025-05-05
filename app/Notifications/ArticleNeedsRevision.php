@@ -13,10 +13,9 @@ class ArticleNeedsRevision extends Notification
     protected $article;
     protected $reason;
 
-    public function __construct(Blog $article, $reason)
+    public function __construct(Blog $article,)
     {
         $this->article = $article;
-        $this->reason = $reason;
     }
 
     public function via($notifiable)
@@ -33,7 +32,6 @@ class ArticleNeedsRevision extends Notification
             'data' => [
                 'article_id' => $this->article->id,
                 'title' => $this->article->title,
-                'reason' => $this->reason
             ]
         ];
     }

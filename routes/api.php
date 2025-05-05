@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Api\ProductController;
-use App\Http\Controllers\Api\ServiceController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ContactController;
@@ -48,6 +48,15 @@ Route::get('/blogs', [BlogController::class, 'index']);
 Route::get('/blogs/guest', [BlogController::class, 'indextwo']);//liste des blogs là où il y a la photo de Axelle
 Route::get('/blog/preview/{slug}', [BlogController::class, 'blogPreview']); // Prévisualisation admin
 Route::get('/blog/guest/{slug}', [BlogController::class, 'blogDetailPublic']); // récupérer l'article pour les visiteurs
+
+// Services
+Route::get('/services', [ServiceController::class, 'index']);
+Route::get('/services/all', [ServiceController::class, 'index_two']);
+Route::get('/services/{service}', [ServiceController::class, 'show']);
+Route::post('/services', [ServiceController::class, 'store']);
+Route::put('/services/{service}', [ServiceController::class, 'update'])->middleware('auth:sanctum');
+Route::delete('/services/{service}', [ServiceController::class, 'destroy']);
+
 // Blog CRUD
 Route::get('/blog/edit/{id}', [BlogController::class, 'show']); //afficher la page modification
 Route::put('/blog/{id}', [BlogController::class, 'update']); // admin modifier l'article
@@ -67,9 +76,6 @@ Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::post('/products', [ProductController::class, 'store']);
 Route::put('/products/{id}', [ProductController::class, 'update']);
 Route::delete('/products/{id}', [ProductController::class, 'destroy']);
-
-// Routes pour les services
-Route::apiResource('services', ServiceController::class);
 
 // Pour les stats
 Route::get('/blog/stats', [BlogController::class, 'stats']);

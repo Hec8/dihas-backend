@@ -163,6 +163,7 @@ public function show($id)
         $config = HTMLPurifier_Config::createDefault();
         $purifier = new HTMLPurifier($config);
         $contenu_propre = $purifier->purify($request->contenu);
+        
         $article = Blog::create([
             'titre' => $request->titre,
             'contenu' => $contenu_propre, // Nettoyage du HTML
@@ -178,7 +179,7 @@ public function show($id)
             "message" => "Article créé avec succès",
             "article" => $article
         ], 201);
-    }
+    } 
 
     public function update(Request $request, $id)
     {
@@ -265,17 +266,12 @@ public function show($id)
     {
         $article = Blog::findOrFail($id);
 
-        $request->validate([
-            'revision_reason' => 'required|string'
-        ]);
-
         $article->update([
-            'statut' => 'needs_revision',
-            'revision_reason' => $request->revision_reason
-        ]);
+            'statut' => 'renvoyé',
+        ]); 
 
         // Notifier l'auteur
-        $article->author->notify(new ArticleNeedsRevision($article, $request->revision_reason));
+        $article->author->notify(new ArticleNeedsRevision($article));
 
         return response()->json([
             'message' => 'Demande de révision envoyée'
