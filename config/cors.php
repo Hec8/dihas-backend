@@ -15,15 +15,15 @@ return [
     |
     */
 
-    'paths' => ['api/*'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['GET', 'POST'],
+    'allowed_methods' => ['*'],
 
     'allowed_origins' => ['https://dihas.vercel.app'],
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['X-Requested-With', 'Content-Type', 'X-Token-Auth'],
+    'allowed_headers' => ['*'],
 
     'exposed_headers' => [],
 

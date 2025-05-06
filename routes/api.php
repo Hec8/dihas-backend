@@ -28,8 +28,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 });
 
-Route::get('/csrf-token', function() {
-    return response()->json(['token' => csrf_token()]);
+Route::middleware('web')->get('/sanctum/csrf-cookie', function () {
+    return response()->noContent();
 });
 
 // Newsletter
