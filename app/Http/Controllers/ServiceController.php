@@ -16,7 +16,9 @@ class ServiceController extends Controller
     public function index()
     {
         $services = Service::where('is_active', true)->get();
-        return response()->json($services);
+        return response()->json([
+            'data' => $services
+        ], 200, [], JSON_PRETTY_PRINT);
     }
 
     //admins

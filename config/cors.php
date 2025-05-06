@@ -17,13 +17,13 @@ return [
 
     'paths' => ['api/*'],
 
-    'allowed_methods' => ['*'],
+    'allowed_methods' => ['GET', 'POST'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'https://dihas.vercel.app')],
+    'allowed_origins' => ['https://dihas.vercel.app'],
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => ['X-Requested-With', 'Content-Type', 'X-Token-Auth'],
 
     'exposed_headers' => [],
 
