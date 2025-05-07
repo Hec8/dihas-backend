@@ -28,10 +28,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 });
 
-Route::middleware('web')->get('/sanctum/csrf-cookie', function () {
-    return response()->noContent();
-});
-
 // Newsletter
 Route::post('/newsletter/subscribe', [NewsletterController::class, 'store']);
 Route::get('/newsletter', [NewsletterController::class, 'index'])->middleware('auth'); // admin
