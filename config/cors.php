@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['https://dihas.vercel.app'],
+    'allowed_origins' => ['https://dihas.vercel.app', 'https://negative-honor-hec8-2159b031.koyeb.app'],
 
     'allowed_origins_patterns' => [],
 
