@@ -6,8 +6,4 @@ Route::get('/', function () {
     return ['Laravel' => app()->version()];
 });
 
-Route::get('/sanctum/csrf-cookie', function () {
-    return response()->noContent();
-});
-
 require __DIR__.'/auth.php';

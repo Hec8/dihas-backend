@@ -1,16 +1,24 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\NewsletterController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\ProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\Blog;
+
+Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
+    return $request->user();
+});
+
+Route::get('/csrf-token', function() {
+    return response()->json(['token' => csrf_token()]);
+});
 
 Route::middleware(['auth:sanctum'])->group(function () {
     // User Profile
@@ -22,15 +30,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
-
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
-});
-
-
-Route::get('/sanctum/csrf-cookie', function () {
-    return response()->noContent();
 });
 
 // Newsletter
@@ -44,12 +43,6 @@ Route::post('/contact/create', [ContactController::class, 'store']); // admin
 Route::delete('/contact/delete/{id}', [ContactController::class, 'destroy'])->middleware('auth'); //admin
 Route::put('/contact/{id}/mark-as-read', [ContactController::class, 'markAsRead']);
 
-// Blog affichage
-Route::get('/blogs', [BlogController::class, 'index']);
-Route::get('/blogs/guest', [BlogController::class, 'indextwo']);//liste des blogs là où il y a la photo de Axelle
-Route::get('/blog/preview/{slug}', [BlogController::class, 'blogPreview']); // Prévisualisation admin
-Route::get('/blog/guest/{slug}', [BlogController::class, 'blogDetailPublic']); // récupérer l'article pour les visiteurs
-
 // Services
 Route::get('/services', [ServiceController::class, 'index']);
 Route::get('/services/all', [ServiceController::class, 'index_two']);
@@ -58,13 +51,18 @@ Route::post('/services', [ServiceController::class, 'store']);
 Route::put('/services/{service}', [ServiceController::class, 'update'])->middleware('auth:sanctum');
 Route::delete('/services/{service}', [ServiceController::class, 'destroy']);
 
+// Blog affichage
+Route::get('/blogs', [BlogController::class, 'index']);
+Route::get('/blogs/guest', [BlogController::class, 'indextwo']);//liste des blogs là où il y a la photo de Axelle
+Route::get('/blog/preview/{slug}', [BlogController::class, 'blogPreview']); // Prévisualisation admin
+Route::get('/blog/guest/{slug}', [BlogController::class, 'blogDetailPublic']); // récupérer l'article pour les visiteurs
 // Blog CRUD
 Route::get('/blog/edit/{id}', [BlogController::class, 'show']); //afficher la page modification
 Route::put('/blog/{id}', [BlogController::class, 'update']); // admin modifier l'article
 Route::post('/blog/create', [BlogController::class, 'store'])->middleware('auth'); // admin
 Route::delete('/blog/delete/{id}', [BlogController::class, 'destroy'])->middleware('auth'); //admin
 
-//Employes 
+//Employes
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/employees', [RegisteredUserController::class, 'index']);
     Route::post('/employees', [RegisteredUserController::class, 'store']);
