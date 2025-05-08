@@ -20,18 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
         ]);
 
-        $middleware->validateCsrfTokens(except: [
-            'api/*',
-            'api/client-login',
-            'api/newsletter/*',
-            'api/newsletter/subscribe',
-            '/login',
-            '/register',
-            '/forgot-password',
-            '/reset-password',
-            '/email/verification-notification',
-            '/logout',
-        ]);
+        $middleware->validateCsrfTokens(except: ['*']);
 
         //
     })

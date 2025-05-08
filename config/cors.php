@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['https://dihas.vercel.app', 'http://localhost:3000'],
 
     'allowed_origins_patterns' => [],
 
@@ -29,10 +29,10 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
+    'supports_credentials' => false,
 
     'paths' => ['api/*'],
 
-    'same_site' => 'none',
+    'same_site' => null,
 
 ];
