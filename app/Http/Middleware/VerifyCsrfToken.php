@@ -12,9 +12,22 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        'api/newsletter/*',
         'api/newsletter/subscribe',
-        'sanctum/csrf-cookie',
-        'api/*'
+        'api/blogs/guest',
+        'api/blog/guest/*',
+        'api/services',
+        'api/contact/create',
+        'sanctum/csrf-cookie'
     ];
+
+    /**
+     * Détermine si la requête est sécurisée.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return bool
+     */
+    protected function isReading($request)
+    {
+        return in_array($request->method(), ['HEAD', 'GET', 'OPTIONS']);
+    }
 }
