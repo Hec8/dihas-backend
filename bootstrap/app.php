@@ -23,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'api/*',
             'api/client-login',
+            'api/newsletter/*',
+            'api/newsletter/subscribe',
             '/login',
             '/register',
             '/forgot-password',
