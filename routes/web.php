@@ -1,21 +1,17 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Response;
-use Illuminate\Http\JsonResponse;
 
 Route::get('/', function () {
     return ['Laravel' => app()->version()];
 });
 
-// Route pour Sanctum
-Route::get('/sanctum/csrf-cookie', function() {
-    return new Response('', 204);
+Route::get('/csrf-token', function () {
+    return response()->json(['token' => csrf_token()]);
 });
 
-// Route pour la compatibilité avec le frontend actuel
-Route::get('/csrf-token', function() {
-    return new JsonResponse(['token' => csrf_token()]);
+Route::get('/sanctum/csrf-cookie', function () {
+    return response()->noContent();
 });
 
 require __DIR__.'/auth.php';

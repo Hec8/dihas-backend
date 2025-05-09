@@ -29,18 +29,20 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'auth' => \App\Http\Middleware\Authenticate::class,
-            'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
-            'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
-            'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
-            'can' => \Illuminate\Auth\Middleware\Authorize::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
-            'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
-            'signed' => \App\Http\Middleware\ValidateSignature::class,
-            'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
             'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
+            'api/*',
+            'sanctum/csrf-cookie',
+            'csrf-token',
+            'login',
+            'register',
+            'logout',
+        ]);
+
+        $middleware->stateful([
             'sanctum/csrf-cookie',
             'csrf-token',
             'login',
