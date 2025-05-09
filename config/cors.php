@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'csrf-token'],
+    'paths' => ['api/*', 'sanctum/csrf-token', 'login', 'csrf-token'],
     'allowed_methods' => ['*'],
     'allowed_origins' => ['https://dihas.vercel.app'],
     'allowed_headers' => ['*'],
