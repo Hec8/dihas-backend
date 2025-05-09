@@ -6,4 +6,12 @@ Route::get('/', function () {
     return ['Laravel' => app()->version()];
 });
 
+Route::get('/csrf-token', function() {
+    return response()->json(['token' => csrf_token()]);
+});
+
+Route::get('/sanctum/csrf-cookie', function() {
+    return response()->json(['message' => 'CSRF cookie set']);
+});
+
 require __DIR__.'/auth.php';
