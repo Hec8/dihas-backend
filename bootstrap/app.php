@@ -17,16 +17,20 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->group('web', [
-            \App\Http\Middleware\Cors::class
+            \Illuminate\Cookie\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
 
         $middleware->group('api', [
-            \App\Http\Middleware\Cors::class
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
 
         $middleware->alias([
             'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
-            'cors' => \App\Http\Middleware\Cors::class,
         ]);
 
         $middleware->stateful([
