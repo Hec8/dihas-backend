@@ -20,17 +20,22 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
         ]);
 
+        $middleware->stateful([
+            'dihas.vercel.app',
+            'negative-honor-hec8-2159b031.koyeb.app'
+        ]);
+
         $middleware->validateCsrfTokens(except: [
             'api/*',
-            '/login',
-            '/register',
-            '/forgot-password',
-            '/reset-password',
-            '/email/verification-notification',
-            '/logout',
-            '/sanctum/csrf-cookie', 
-            '/csrf-token', // Ajoutez votre route personnalisée ici
-            '/user' // Si vous utilisez /api/user
+            'sanctum/csrf-cookie',
+            'csrf-token',
+            'login',
+            'register',
+            'forgot-password',
+            'reset-password',
+            'email/verification-notification',
+            'logout',
+            'user'
         ]);
 
 
