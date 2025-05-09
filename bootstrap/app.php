@@ -36,7 +36,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'api/*',
             'sanctum/csrf-cookie',
-            'csrf-token',
             'login',
             'register',
             'logout',
@@ -44,10 +43,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->stateful([
             'sanctum/csrf-cookie',
-            'csrf-token',
-            'login',
-            'register',
-            'logout',
         ]);
 
         $middleware->stateful([

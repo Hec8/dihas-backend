@@ -1,37 +1,19 @@
 <?php
 
 return [
-    'paths' => ['*'], // Autoriser toutes les routes
+    'paths' => ['sanctum/csrf-cookie', 'api/*'],
     
-    'allowed_methods' => ['*'],
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     
-    'allowed_origins' => [
-        env('FRONTEND_URL', 'https://dihas.vercel.app'),
-        'http://localhost:3000',
-    ],
+    'allowed_origins' => ['https://dihas.vercel.app'],
     
     'allowed_origins_patterns' => [],
     
-    'allowed_headers' => [
-        'X-CSRF-TOKEN',
-        'X-XSRF-TOKEN',
-        'X-Requested-With',
-        'Accept',
-        'Accept-Version',
-        'Content-Length',
-        'Content-MD5',
-        'Content-Type',
-        'Date',
-        'X-Api-Version',
-        'Authorization',
-    ],
+    'allowed_headers' => ['*'],
     
-    'exposed_headers' => [
-        'X-CSRF-TOKEN',
-        'X-XSRF-TOKEN',
-    ],
+    'exposed_headers' => [],
     
-    'max_age' => 60 * 60 * 24, // 24 heures
+    'max_age' => 0,
     
     'supports_credentials' => true,
 ];
