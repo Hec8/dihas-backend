@@ -18,6 +18,7 @@ class AdminSeeder extends Seeder
             'email' => 'admin@dihas.com',
             'role' => 'super_admin',
             'password' => Hash::make('password123'), // À changer en production
+            'email_verified_at' => now(),
         ]);
     }
 }
