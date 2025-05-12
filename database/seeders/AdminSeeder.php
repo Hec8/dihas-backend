@@ -15,9 +15,9 @@ class AdminSeeder extends Seeder
     {
         User::create([
             'name' => 'Super Admin',
-            'email' => 'admin@dihas.com',
+            'email' => 'contact@dihas.tech',
             'role' => 'super_admin',
-            'password' => Hash::make('password123'), // À changer en production
+            'password' => Hash::make('admin123'), // À changer en production
             'email_verified_at' => now(),
         ]);
     }
