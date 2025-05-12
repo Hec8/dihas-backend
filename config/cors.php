@@ -1,11 +1,11 @@
 <?php
 
 return [
-    'paths' => ['sanctum/csrf-cookie', 'api/*'],
+    'paths' => ['*'],
     
-    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    'allowed_methods' => ['*'],
     
-    'allowed_origins' => ['https://dihas.vercel.app'],
+    'allowed_origins' => ['https://dihas.vercel.app', 'http://localhost:3000'],
     
     'allowed_origins_patterns' => [],
     
