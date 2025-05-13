@@ -77,6 +77,13 @@ public function show($id)
      * @param  string  $slug
      * @return \Illuminate\Http\JsonResponse
      */
+    /**
+     * Prévisualisation d'un article pour l'admin et le content creator
+     * Cette méthode permet de voir tous les articles, quel que soit leur statut
+     *
+     * @param  string  $slug
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function blogPreview($slug)
     {
         $article = Blog::where('slug', $slug)->first();
