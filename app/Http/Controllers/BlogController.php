@@ -87,8 +87,8 @@ public function show($id)
             ], 404);
         }
 
-        // Vérifier si l'utilisateur est admin ou s'il est l'auteur de l'article
-        if (Auth::user()->role !== 'super_admin' && $article->writer !== Auth::user()->name) {
+        // Vérifier si l'utilisateur est admin, content creator ou s'il est l'auteur de l'article
+        if (Auth::user()->role !== 'super_admin' && Auth::user()->role !== 'content_creator' && $article->writer !== Auth::user()->name) {
             return response()->json([
                 "message" => "Non autorisé à voir cet article"
             ], 403);
