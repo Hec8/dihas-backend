@@ -10,21 +10,36 @@ use Illuminate\Support\Str;
 class ServiceController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource (for visitors).
      */
-    //visitors
     public function index()
     {
         $services = Service::where('is_active', true)->get();
+        $services->transform(function ($service) {
+            if ($service->icon && !Str::startsWith($service->icon, 'http')) {
+                $service->icon = secure_url(ltrim($service->icon, '/'));
+            }
+            return $service;
+        });
+
         return response()->json([
             'data' => $services
         ], 200, [], JSON_PRETTY_PRINT);
     }
 
-    //admins
+    /**
+     * Display a listing of the resource (for admins).
+     */
     public function index_two()
     {
         $services = Service::all();
+        $services->transform(function ($service) {
+            if ($service->icon && !Str::startsWith($service->icon, 'http')) {
+                $service->icon = secure_url(ltrim($service->icon, '/'));
+            }
+            return $service;
+        });
+
         return response()->json([
             'Liste des services' => $services
         ]);
@@ -42,7 +57,6 @@ class ServiceController extends Controller
             'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
         ]);
 
-        // Traitement de l'icone
         $imageName = null;
         if ($request->hasFile('icon')) {
             $icon = $request->file('icon');
@@ -70,60 +84,62 @@ class ServiceController extends Controller
      */
     public function show(Service $service)
     {
+        if ($service->icon && !Str::startsWith($service->icon, 'http')) {
+            $service->icon = secure_url(ltrim($service->icon, '/'));
+        }
+
         return response()->json($service);
     }
 
     /**
      * Update the specified resource in storage.
      */
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'title' => 'sometimes|required|string|max:255',
+            'content' => 'sometimes|required|string',
+            'is_active' => 'sometimes|boolean',
+            'icon' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+        ]);
 
-public function update(Request $request, $id)
-{
-    $validated = $request->validate([
-        'title' => 'sometimes|required|string|max:255',
-        'content' => 'sometimes|required|string',
-        'is_active' => 'sometimes|boolean',
-        'icon' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
-    ]);
+        $service = Service::findOrFail($id);
 
-    $service = Service::findOrFail($id);
-
-    // Mise à jour du slug si le titre change
-    if ($request->has('title') && $request->title !== $service->title) {
-        $validated['slug'] = Str::slug($request->title);
-    }
-
-    // Gestion de l'icône
-    $imageName = null;
-    if ($request->hasFile('icon')) {
-        // Supprimer l'ancienne icône si elle existe
-        if ($service->icon) {
-            $oldImagePath = public_path($service->icon);
-            if (file_exists($oldImagePath)) {
-                unlink($oldImagePath);
-            }
+        if ($request->has('title') && $request->title !== $service->title) {
+            $validated['slug'] = Str::slug($request->title);
         }
 
-        // Enregistrer la nouvelle icône
-        $icon = $request->file('icon');
-        $imageName = time() . '.' . $icon->getClientOriginalExtension();
-        $icon->move(public_path('images/services'), $imageName);
-        $validated['icon'] = '/images/services/' . $imageName;
-    } else {
-        // Conserver l'icône existante si aucune nouvelle n'est fournie
-        $validated['icon'] = $service->icon;
+        if ($request->hasFile('icon')) {
+            if ($service->icon) {
+                $oldImagePath = public_path($service->icon);
+                if (file_exists($oldImagePath)) {
+                    unlink($oldImagePath);
+                }
+            }
+
+            $icon = $request->file('icon');
+            $imageName = time() . '.' . $icon->getClientOriginalExtension();
+            $icon->move(public_path('images/services'), $imageName);
+            $validated['icon'] = '/images/services/' . $imageName;
+        }
+
+        $service->update($validated);
+
+        return response()->json($service);
     }
-
-    $service->update($validated);
-
-    return response()->json($service);
-}
 
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(Service $service)
     {
+        if ($service->icon) {
+            $imagePath = public_path($service->icon);
+            if (file_exists($imagePath)) {
+                unlink($imagePath);
+            }
+        }
+
         $service->delete();
         return response()->json(null, 204);
     }

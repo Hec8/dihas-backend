@@ -25,24 +25,23 @@ class BlogController extends Controller
     }
 
     public function indextwo()
-    {
-        $articles = Blog::where('statut', 'validé') // Seulement les articles validés
-                       ->get();
-        $articles = $articles->map(function($article) {
-            if ($article->image) {
-                
-                if (!str_starts_with($article->image, 'http')) {
-                    // Nettoyer le chemin de l'image
-                    $cleanPath = str_replace('images/', '', $article->image);
-                    $article->image = url('images/' . $cleanPath);
-                }
+{
+    $articles = Blog::where('statut', 'validé')->get();
+    
+    $articles = $articles->map(function($article) {
+        if ($article->image) {
+            if (!str_starts_with($article->image, 'http')) {
+                $cleanPath = $this->normalizeImagePath($article->image);
+                $article->image = secure_url($cleanPath);
             }
-            return $article;
-        });
-        return response()->json([
-            'blogs' => $articles
-        ]);
-    }
+            // Supprimez les éventuels doubles slashes restants
+            $article->image = str_replace('//', '/', $article->image);
+        }
+        return $article;
+    });
+    
+    return response()->json(['blogs' => $articles]);
+}
 
     /**
  * Affiche un article spécifique par son ID
@@ -62,8 +61,11 @@ public function show($id)
     }
 
     if ($article->image && !str_starts_with($article->image, 'http')) {
-        $article->image = url('images/' . $article->image);
+        $cleanPath = $this->normalizeImagePath($article->image);
+        $article->image = secure_url($cleanPath);
     }
+    // Supprimez les éventuels doubles slashes restants
+    $article->image = str_replace('//', '/', $article->image);
 
     return response()->json([
         "article" => $article
@@ -102,12 +104,13 @@ public function show($id)
         }
 
         if ($article->image) {
-            if (!str_starts_with($article->image, 'http')) {
-                // Nettoyer le chemin de l'image
-                $cleanPath = str_replace('images/', '', $article->image);
-                $article->image = url('images/' . $cleanPath);
+            if ($article->image && !str_starts_with($article->image, 'http')) {
+                $cleanPath = $this->normalizeImagePath($article->image);
+                $article->image = secure_url($cleanPath);
             }
         }
+        // Supprimez les éventuels doubles slashes restants
+        $article->image = str_replace('//', '/', $article->image);
 
         return response()->json([
             "article" => $article
@@ -127,12 +130,14 @@ public function show($id)
         }
 
         if ($article->image) {
-            if (!str_starts_with($article->image, 'http')) {
-                // Nettoyer le chemin de l'image
-                $cleanPath = str_replace('images/', '', $article->image);
-                $article->image = url('images/' . $cleanPath);
+            if ($article->image && !str_starts_with($article->image, 'http')) {
+                $cleanPath = $this->normalizeImagePath($article->image);
+                $article->image = secure_url($cleanPath);
             }
         }
+
+        // Supprimez les éventuels doubles slashes restants
+        $article->image = str_replace('//', '/', $article->image);
 
         return response()->json([
             "article" => $article
