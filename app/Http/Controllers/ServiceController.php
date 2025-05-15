@@ -6,48 +6,30 @@ use App\Http\Controllers\Controller;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+use Illuminate\Support\Facades\Storage;
 
 class ServiceController extends Controller
 {
-    /**
-     * Display a listing of the resource (for visitors).
-     */
+    // visiteurs
     public function index()
     {
         $services = Service::where('is_active', true)->get();
-        $services->transform(function ($service) {
-            if ($service->icon && !Str::startsWith($service->icon, 'http')) {
-                $service->icon = secure_url(ltrim($service->icon, '/'));
-            }
-            return $service;
-        });
-
         return response()->json([
             'data' => $services
         ], 200, [], JSON_PRETTY_PRINT);
     }
 
-    /**
-     * Display a listing of the resource (for admins).
-     */
+    // admins
     public function index_two()
     {
         $services = Service::all();
-        $services->transform(function ($service) {
-            if ($service->icon && !Str::startsWith($service->icon, 'http')) {
-                $service->icon = secure_url(ltrim($service->icon, '/'));
-            }
-            return $service;
-        });
-
         return response()->json([
             'Liste des services' => $services
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    // création d’un service
     public function store(Request $request)
     {
         $request->validate([
@@ -57,11 +39,23 @@ class ServiceController extends Controller
             'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
         ]);
 
-        $imageName = null;
+        $iconUrl = null;
+        $iconPublicId = null;
+
         if ($request->hasFile('icon')) {
-            $icon = $request->file('icon');
-            $imageName = time() . '.' . $icon->getClientOriginalExtension();
-            $icon->move(public_path('images/services'), $imageName);
+            // Sauvegarde temporaire du fichier
+            $path = $request->file('icon')->store('temp');
+            $fullPath = Storage::path($path);
+            
+            // Upload vers Cloudinary
+            $result = cloudinary()->uploadApi()->upload($fullPath, ['folder' => 'services']);
+            
+            // Récupération des informations
+            $iconUrl = $result['secure_url'];
+            $iconPublicId = $result['public_id'];
+            
+            // Suppression du fichier temporaire
+            Storage::delete($path);
         }
 
         $data = [
@@ -69,7 +63,8 @@ class ServiceController extends Controller
             'content' => $request->content,
             'slug' => Str::slug($request->title),
             'is_active' => $request->is_active ?? true,
-            'icon' => $imageName ? '/images/services/' . $imageName : null,
+            'icon' => $iconUrl,
+            'public_icon_id' => $iconPublicId,
         ];
 
         Service::create($data);
@@ -79,21 +74,13 @@ class ServiceController extends Controller
         ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
+    // afficher un service
     public function show(Service $service)
     {
-        if ($service->icon && !Str::startsWith($service->icon, 'http')) {
-            $service->icon = secure_url(ltrim($service->icon, '/'));
-        }
-
         return response()->json($service);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+    // mise à jour
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
@@ -105,22 +92,32 @@ class ServiceController extends Controller
 
         $service = Service::findOrFail($id);
 
+        // si le titre change, on change le slug
         if ($request->has('title') && $request->title !== $service->title) {
             $validated['slug'] = Str::slug($request->title);
         }
 
         if ($request->hasFile('icon')) {
-            if ($service->icon) {
-                $oldImagePath = public_path($service->icon);
-                if (file_exists($oldImagePath)) {
-                    unlink($oldImagePath);
-                }
+            // suppression de l’ancienne image
+            if ($service->public_icon_id) {
+                cloudinary()->uploadApi()->destroy($service->public_icon_id);
             }
 
-            $icon = $request->file('icon');
-            $imageName = time() . '.' . $icon->getClientOriginalExtension();
-            $icon->move(public_path('images/services'), $imageName);
-            $validated['icon'] = '/images/services/' . $imageName;
+            // Sauvegarde temporaire du fichier
+            $path = $request->file('icon')->store('temp');
+            $fullPath = Storage::path($path);
+            
+            // Upload vers Cloudinary
+            $result = cloudinary()->uploadApi()->upload($fullPath, ['folder' => 'services']);
+            
+            // Récupération des informations
+            $service->icon = $result['secure_url'];
+            $service->public_icon_id = $result['public_id'];
+            
+            // Suppression du fichier temporaire
+            Storage::delete($path);
+        } else {
+            $validated['icon'] = $service->icon;
         }
 
         $service->update($validated);
@@ -128,19 +125,19 @@ class ServiceController extends Controller
         return response()->json($service);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Service $service)
+    // suppression
+    public function destroy($id)
     {
-        if ($service->icon) {
-            $imagePath = public_path($service->icon);
-            if (file_exists($imagePath)) {
-                unlink($imagePath);
-            }
+        $service = Service::findOrFail($id);
+
+        if ($service->public_icon_id) {
+            cloudinary()->uploadApi()->destroy($service->public_icon_id);
         }
 
         $service->delete();
-        return response()->json(null, 204);
+
+        return response()->json([
+            "message" => "Service supprimé avec succès"
+        ]);
     }
 }

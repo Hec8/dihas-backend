@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Blog extends Model
-{
+{ 
     protected $fillable = [
         'titre',
         'contenu',
@@ -16,6 +16,7 @@ class Blog extends Model
         'note',
         'slug',
         'image',
+        'image_public_id', // Ajouté ici
     ];
 
     public function user():BelongsTo {

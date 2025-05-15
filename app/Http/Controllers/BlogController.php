@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use HTMLPurifier;
 use HTMLPurifier_Config;
 use Illuminate\Support\Str;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 $config = HTMLPurifier_Config::createDefault();
 $purifier = new HTMLPurifier($config);
@@ -19,117 +20,56 @@ class BlogController extends Controller
     public function index()
     {
         $articles = Blog::all();
-        return response()->json([
-            'Liste des articles' => $articles
-        ]);
+        return response()->json(['Liste des articles' => $articles]);
     }
 
     public function indextwo()
     {
-        $articles = Blog::where('statut', 'validé') // Seulement les articles validés
-                       ->get();
-        $articles = $articles->map(function($article) {
-            if ($article->image) {
-                
-                if (!str_starts_with($article->image, 'http')) {
-                    // Nettoyer le chemin de l'image
-                    $cleanPath = str_replace('images/', '', $article->image);
-                    $article->image = url('images/' . $cleanPath);
-                }
-            }
-            return $article;
-        });
-        return response()->json([
-            'blogs' => $articles
-        ]);
+        $articles = Blog::where('statut', 'validé')->get();
+        return response()->json(['blogs' => $articles]);
     }
 
-    /**
- * Affiche un article spécifique par son ID
- *
- * @param  int  $id
- * @return \Illuminate\Http\JsonResponse
- */
-public function show($id)
-{
-    
-    $article = Blog::find($id); // Utilisez find() au lieu de where()->first()
+    public function show($id)
+    {
+        $article = Blog::find($id);
 
-    if (!$article) {
-        return response()->json([
-            "message" => "Article non trouvé"
-        ], 404);
+        if (!$article) {
+            return response()->json(["message" => "Article non trouvé"], 404);
+        }
+
+        return response()->json(["article" => $article]);
     }
 
-    if ($article->image && !str_starts_with($article->image, 'http')) {
-        $article->image = url('images/' . $article->image);
-    }
-
-    return response()->json([
-        "article" => $article
-    ]);
-}
-
-    /**
-     * Prévisualisation d'un article pour l'admin et le content creator
-     * Cette méthode permet de voir tous les articles, quel que soit leur statut
-     *
-     * @param  string  $slug
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function blogPreview($slug)
     {
         $article = Blog::where('slug', $slug)->first();
 
         if (!$article) {
-            return response()->json([
-                "message" => "Article non trouvé"
-            ], 404);
+            return response()->json(["message" => "Article non trouvé"], 404);
         }
 
-        // Vérifier si l'utilisateur est admin, content creator ou s'il est l'auteur de l'article
-        if (Auth::user()->role !== 'super_admin' && Auth::user()->role !== 'content_creator' && $article->writer !== Auth::user()->name) {
-            return response()->json([
-                "message" => "Non autorisé à voir cet article"
-            ], 403);
-        }
+        if (
+            Auth::user()->role !== 'super_admin' &&
+            Auth::user()->role !== 'content_creator' &&
+            $article->writer !== Auth::user()->name
+        ) {
+            return response()->json(["message" => "Non autorisé à voir cet article"], 403);
+        } 
 
-        if ($article->image) {
-            if (!str_starts_with($article->image, 'http')) {
-                // Nettoyer le chemin de l'image
-                $cleanPath = str_replace('images/', '', $article->image);
-                $article->image = url('images/' . $cleanPath);
-            }
-        }
-
-        return response()->json([
-            "article" => $article
-        ]);
+        return response()->json(["article" => $article]);
     }
 
     public function blogDetailPublic($slug)
     {
         $article = Blog::where('slug', $slug)
-                       ->where('statut', 'validé') // Seulement les articles validés
+                       ->where('statut', 'validé')
                        ->first();
 
         if (!$article) {
-            return response()->json([
-                "message" => "Article non trouvé"
-            ], 404);
+            return response()->json(["message" => "Article non trouvé"], 404);
         }
 
-        if ($article->image) {
-            if (!str_starts_with($article->image, 'http')) {
-                // Nettoyer le chemin de l'image
-                $cleanPath = str_replace('images/', '', $article->image);
-                $article->image = url('images/' . $cleanPath);
-            }
-        }
-
-        return response()->json([
-            "article" => $article
-        ]);
+        return response()->json(["article" => $article]);
     }
 
     public function stats()
@@ -152,86 +92,94 @@ public function show($id)
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // Traitement de l'image
-        $imageName = null;
+        $imageUrl = null;
+        $imagePublicId = null;
+
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
-            $image->move(public_path('images'), $imageName);
+            // Sauvegarde temporaire du fichier
+            $path = $request->file('image')->store('temp');
+            $fullPath = Storage::path($path);
+            
+            // Upload vers Cloudinary
+            $result = cloudinary()->uploadApi()->upload($fullPath, ['folder' => 'blogs']);
+            
+            // Récupération des informations
+            $imageUrl = $result['secure_url'];
+            $imagePublicId = $result['public_id'];
+            
+            // Suppression du fichier temporaire
+            Storage::delete($path);
         }
 
         $config = HTMLPurifier_Config::createDefault();
         $purifier = new HTMLPurifier($config);
         $contenu_propre = $purifier->purify($request->contenu);
-        
+
         $article = Blog::create([
             'titre' => $request->titre,
-            'contenu' => $contenu_propre, // Nettoyage du HTML
+            'contenu' => $contenu_propre,
             'writer' => $request->writer,
             'resume' => $request->resume,
             'slug' => Str::slug($request->titre),
-            'image' => $imageName ? '/images/' . $imageName : null,
-            'statut' => 'en cours', // Statut par défaut
-            'note' => null, // Pas de note initiale
+            'image' => $imageUrl,
+            'image_public_id' => $imagePublicId,
         ]);
 
         return response()->json([
             "message" => "Article créé avec succès",
             "article" => $article
         ], 201);
-    } 
+    }
 
     public function update(Request $request, $id)
     {
         $article = Blog::findOrFail($id);
 
-    $request->validate([
-        'titre' => 'sometimes|required|string|max:255',
-        'contenu' => 'sometimes|required|string',
-        'writer' => 'sometimes|required|string|max:255',
-        'resume' => 'sometimes|required|string|max:500',
-        'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:2048',
-        'statut' => 'sometimes|in:en cours,validé,renvoyé',
-        'note' => 'nullable|string|max:1000'
-    ]);
+        $request->validate([
+            'titre' => 'sometimes|required|string|max:255',
+            'contenu' => 'sometimes|required|string',
+            'writer' => 'sometimes|required|string|max:255',
+            'resume' => 'sometimes|required|string|max:500',
+            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'statut' => 'sometimes|in:en cours,validé,renvoyé',
+            'note' => 'nullable|string|max:1000'
+        ]);
 
-        // Mise à jour standard
         if ($request->has('titre')) {
             $article->titre = $request->titre;
             $article->slug = Str::slug($request->titre);
         }
 
-        $config = HTMLPurifier_Config::createDefault();
-        $purifier = new HTMLPurifier($config);
-        $contenu_propre = $purifier->purify($request->contenu);
-        
         if ($request->has('contenu')) {
-            $article->contenu = $contenu_propre;
+            $config = HTMLPurifier_Config::createDefault();
+            $purifier = new HTMLPurifier($config);
+            $article->contenu = $purifier->purify($request->contenu);
         }
 
-        // Gestion du statut et des notes (seulement pour admin)
         if ($request->user()->role === 'super_admin') {
-            if ($request->has('statut')) {
-                $article->statut = $request->statut;
-            }
-            if ($request->has('note')) {
-                $article->note = $request->note;
-            }
+            if ($request->has('statut')) $article->statut = $request->statut;
+            if ($request->has('note')) $article->note = $request->note;
         }
 
-        // Gestion de l'image
         if ($request->hasFile('image')) {
-            // Suppression ancienne image
-            if ($article->image) {
-                $oldPath = public_path($article->image);
-                if (file_exists($oldPath)) {
-                    unlink($oldPath);
-                }
+            // Supprimer l'ancienne image si présente
+            if ($article->image_public_id) {
+                cloudinary()->uploadApi()->destroy($article->image_public_id);
             }
 
-            $imageName = time() . '.' . $request->image->extension();
-            $request->image->move(public_path('images'), $imageName);
-            $article->image = '/images/' . $imageName;
+            // Sauvegarde temporaire du fichier
+            $path = $request->file('image')->store('temp');
+            $fullPath = Storage::path($path);
+            
+            // Upload vers Cloudinary
+            $result = cloudinary()->uploadApi()->upload($fullPath, ['folder' => 'blogs']);
+            
+            // Récupération des informations
+            $article->image = $result['secure_url'];
+            $article->image_public_id = $result['public_id'];
+            
+            // Suppression du fichier temporaire
+            Storage::delete($path);
         }
 
         $article->save();
@@ -245,7 +193,7 @@ public function show($id)
     public function validateArticle(Request $request, $id)
     {
         $article = Blog::findOrFail($id);
-        
+
         $request->validate([
             'statut' => 'required|in:validé,renvoyé',
             'note' => 'required_if:statut,renvoyé|nullable|string|max:1000'
@@ -265,12 +213,8 @@ public function show($id)
     public function requestRevision(Request $request, $id)
     {
         $article = Blog::findOrFail($id);
+        $article->update(['statut' => 'renvoyé']);
 
-        $article->update([
-            'statut' => 'renvoyé',
-        ]); 
-
-        // Notifier l'auteur
         $article->author->notify(new ArticleNeedsRevision($article));
 
         return response()->json([
@@ -282,12 +226,9 @@ public function show($id)
     {
         $article = Blog::findOrFail($id);
 
-        // Suppression de l'image
-        if ($article->image) {
-            $imagePath = public_path($article->image);
-            if (file_exists($imagePath)) {
-                unlink($imagePath);
-            }
+        // Supprimer l’image sur Cloudinary si présente
+        if ($article->image_public_id) {
+            Cloudinary::destroy($article->image_public_id);
         }
 
         $article->delete();

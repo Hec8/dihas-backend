@@ -14,7 +14,8 @@ class Service extends Model
         'content',
         'slug',
         'is_active',
-        'icon'
+        'icon',
+        'public_icon_id'
     ];
 
     protected $casts = [
