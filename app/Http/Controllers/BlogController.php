@@ -204,6 +204,15 @@ class BlogController extends Controller
             'note' => $request->note
         ]);
 
+        // Envoyer une notification si l'article est renvoyé
+        if ($request->statut === 'renvoyé' && $article->writer) {
+            // Vérifier si l'auteur existe et peut recevoir des notifications
+            $author = $article->author;
+            if ($author) {
+                $author->notify(new ArticleNeedsRevision($article));
+            }
+        }
+
         return response()->json([
             "message" => "Statut de l'article mis à jour",
             "article" => $article
@@ -226,12 +235,10 @@ class BlogController extends Controller
     {
         $article = Blog::findOrFail($id);
 
-        // Supprimer l’image sur Cloudinary si présente
         if ($article->image_public_id) {
-            Cloudinary::destroy($article->image_public_id);
+            $article->delete();
+            cloudinary()->uploadApi()->destroy($article->image_public_id);
         }
-
-        $article->delete();
 
         return response()->json([
             "message" => "Article supprimé avec succès"

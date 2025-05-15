@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -21,5 +22,13 @@ class Blog extends Model
 
     public function user():BelongsTo {
         return $this->belongsTo(User::class);
+    }
+    
+    /**
+     * Obtenir l'auteur de l'article basé sur le champ writer
+     */
+    public function author()
+    {
+        return User::where('name', $this->writer)->first();
     }
 }

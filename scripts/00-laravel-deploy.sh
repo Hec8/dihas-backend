@@ -9,11 +9,11 @@ php artisan config:cache
 echo "Caching routes..."
 php artisan route:cache
 
-echo "Vider la base de données..."
-php artisan migrate:refresh --force
+# echo "Vider la base de données..."
+# php artisan migrate:refresh --force
 
-# echo "Running migrations..."
-# php artisan migrate --force
+echo "Running migrations..."
+php artisan migrate --force
 
 echo "Running seeds by force..."
 php artisan db:seed --force
