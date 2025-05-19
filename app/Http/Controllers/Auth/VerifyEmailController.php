@@ -13,35 +13,38 @@ class VerifyEmailController extends Controller
      * Mark the authenticated user's email address as verified.
      */
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
-    {
-        // Vérifier si l'utilisateur est connecté
-        if (!auth()->check()) {
-            return redirect()->guest(
-                config('app.frontend_url').'/login'
-            );
-        }
+{
+    if (!$request->hasValidSignature()) {
+        abort(403, 'Invalid signature');
+    }
 
-        $user = $request->user();
-        
-        // Si l'email est déjà vérifié
-        if ($user->hasVerifiedEmail()) {
-            return redirect()->intended(
-                $user->role === 'admin' 
-                    ? config('app.frontend_url').'/dashboard?verified=1'
-                    : config('app.frontend_url').'/content-creator-dashboard?verified=1'
-            );
+    $user = $request->user();
+    
+    // Si aucun utilisateur n'est connecté, essayez de le récupérer depuis l'ID
+    if (!$user) {
+        $user = \App\Models\User::find($request->id);
+        if (!$user) {
+            abort(404, 'User not found');
         }
+        auth()->login($user); // Connectez l'utilisateur temporairement
+    }
 
-        // Marquer l'email comme vérifié
-        if ($user->markEmailAsVerified()) {
-            event(new Verified($user));
-        }
-
-        // Rediriger vers le bon tableau de bord en fonction du rôle
+    if ($user->hasVerifiedEmail()) {
         return redirect()->intended(
-            $user->role === 'admin'
+            $user->role === 'super_admin' 
                 ? config('app.frontend_url').'/dashboard?verified=1'
                 : config('app.frontend_url').'/content-creator-dashboard?verified=1'
         );
     }
+
+    if ($user->markEmailAsVerified()) {
+        event(new Verified($user));
+    }
+
+    return redirect()->intended(
+        $user->role === 'super_admin'
+            ? config('app.frontend_url').'/dashboard?verified=1'
+            : config('app.frontend_url').'/content-creator-dashboard?verified=1'
+    );
+}
 }
