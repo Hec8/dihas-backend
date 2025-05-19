@@ -14,18 +14,34 @@ class VerifyEmailController extends Controller
      */
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
     {
-        if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(
-                config('app.frontend_url').'/dashboard?verified=1'
+        // Vérifier si l'utilisateur est connecté
+        if (!auth()->check()) {
+            return redirect()->guest(
+                config('app.frontend_url').'/login'
             );
         }
 
-        if ($request->user()->markEmailAsVerified()) {
-            event(new Verified($request->user()));
+        $user = $request->user();
+        
+        // Si l'email est déjà vérifié
+        if ($user->hasVerifiedEmail()) {
+            return redirect()->intended(
+                $user->role === 'admin' 
+                    ? config('app.frontend_url').'/dashboard?verified=1'
+                    : config('app.frontend_url').'/content-creator-dashboard?verified=1'
+            );
         }
 
+        // Marquer l'email comme vérifié
+        if ($user->markEmailAsVerified()) {
+            event(new Verified($user));
+        }
+
+        // Rediriger vers le bon tableau de bord en fonction du rôle
         return redirect()->intended(
-            config('app.frontend_url').'/dashboard?verified=1'
+            $user->role === 'admin'
+                ? config('app.frontend_url').'/dashboard?verified=1'
+                : config('app.frontend_url').'/content-creator-dashboard?verified=1'
         );
     }
 }
