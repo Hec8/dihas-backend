@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Product;
-use Illuminate\Support\Facades\Storage; // pour gérer les fichiers images
-use Illuminate\Support\Facades\Validator; // pour valider les données entrantes
-use Illuminate\Support\Str; // pour générer des URL uniques
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class ProductController extends Controller
 {
@@ -64,21 +65,38 @@ class ProductController extends Controller
 
         // Gérer l'upload de l'image principale
         if ($request->hasFile('homepage_image')) {
-            $validatedData['homepage_image'] = $request->file('homepage_image')->store('products/homepage', 'public');
+            $path = $request->file('homepage_image')->store('temp');
+            $fullPath = Storage::path($path);
+            $result = Cloudinary::uploadApi()->upload($fullPath, ['folder' => 'products/homepage']);
+            $validatedData['homepage_image'] = $result['secure_url'];
+            $validatedData['homepage_image_public_id'] = $result['public_id'];
+            Storage::delete($path);
         }
 
         // Gérer l'upload du logo
         if ($request->hasFile('logo')) {
-            $validatedData['logo'] = $request->file('logo')->store('products/logos', 'public');
+            $path = $request->file('logo')->store('temp');
+            $fullPath = Storage::path($path);
+            $result = Cloudinary::uploadApi()->upload($fullPath, ['folder' => 'products/logos']);
+            $validatedData['logo'] = $result['secure_url'];
+            $validatedData['logo_public_id'] = $result['public_id'];
+            Storage::delete($path);
         }
 
-         // Gérer l'upload des images de détail
-         if ($request->hasFile('detail_images')) {
-            $detailImagePaths = [];
+        // Gérer l'upload des images de détail
+        if ($request->hasFile('detail_images')) {
+            $detailImages = [];
             foreach ($request->file('detail_images') as $file) {
-                $detailImagePaths[] = $file->store('products/details', 'public');
+                $path = $file->store('temp');
+                $fullPath = Storage::path($path);
+                $result = Cloudinary::uploadApi()->upload($fullPath, ['folder' => 'products/details']);
+                $detailImages[] = [
+                    'url' => $result['secure_url'],
+                    'public_id' => $result['public_id']
+                ];
+                Storage::delete($path);
             }
-            $validatedData['detail_images'] = $detailImagePaths; // Le cast JSON se fera via le modèle
+            $validatedData['detail_images'] = $detailImages;
         }
 
         $product = Product::create($validatedData);
@@ -90,12 +108,21 @@ class ProductController extends Controller
      * Display the specified resource.
      * On utilisera le slug pour récupérer le produit pour les urls plus jolies
     */
-    public function show(string $id)//
+    public function show(string $id)
     {
         $product = Product::where('id', $id)
-        ->where('is_published', true)
-        ->firstOrFail();
+            ->where('is_published', true)
+            ->firstOrFail();
         return response()->json($product);
+    }
+
+    /**
+     * Display the specified resource by slug.
+     */
+    public function showBySlug(string $slug)
+    {
+        $product = Product::where('slug', $slug)->firstOrFail();
+        return response()->json(['data' => $product]);
     }
 
     /**
@@ -143,48 +170,71 @@ class ProductController extends Controller
 
         // Gérer la mise à jour de l'image principale
         if ($request->hasFile('homepage_image')) {
-            // Supprimer l'ancienne image si elle existe
-            if ($product->homepage_image) {
-                Storage::disk('public')->delete($product->homepage_image);
+            // Supprimer l'ancienne image de Cloudinary si elle existe
+            if ($product->homepage_image_public_id) {
+                Cloudinary::uploadApi()->destroy($product->homepage_image_public_id);
             }
-            $validatedData['homepage_image'] = $request->file('homepage_image')->store('products/homepage', 'public');
+            
+            // Uploader la nouvelle image
+            $path = $request->file('homepage_image')->store('temp');
+            $fullPath = Storage::path($path);
+            $result = Cloudinary::uploadApi()->upload($fullPath, ['folder' => 'products/homepage']);
+            $validatedData['homepage_image'] = $result['secure_url'];
+            $validatedData['homepage_image_public_id'] = $result['public_id'];
+            Storage::delete($path);
         }
 
         // Gérer la mise à jour du logo
         if ($request->hasFile('logo')) {
-            if ($product->logo) {
-                Storage::disk('public')->delete($product->logo);
+            // Supprimer l'ancien logo de Cloudinary s'il existe
+            if ($product->logo_public_id) {
+                Cloudinary::uploadApi()->destroy($product->logo_public_id);
             }
-            $validatedData['logo'] = $request->file('logo')->store('products/logos', 'public');
+            
+            // Uploader le nouveau logo
+            $path = $request->file('logo')->store('temp');
+            $fullPath = Storage::path($path);
+            $result = Cloudinary::uploadApi()->upload($fullPath, ['folder' => 'products/logos']);
+            $validatedData['logo'] = $result['secure_url'];
+            $validatedData['logo_public_id'] = $result['public_id'];
+            Storage::delete($path);
         }
 
-        // Gérer la mise à jour des images de détail (remplacement complet ici, logique plus complexe possible)
-         if ($request->hasFile('detail_images')) {
-             // Supprimer les anciennes images
-             if ($product->detail_images && is_array($product->detail_images)) {
-                 foreach ($product->detail_images as $oldImage) {
-                    if($oldImage) { // Vérifier si le chemin n'est pas null/vide
-                        Storage::disk('public')->delete($oldImage);
-                    }
-                 }
-             }
-             // Uploader les nouvelles
-             $detailImagePaths = [];
-             foreach ($request->file('detail_images') as $file) {
-                 $detailImagePaths[] = $file->store('products/details', 'public');
-             }
-             $validatedData['detail_images'] = $detailImagePaths;
-            } elseif ($request->has('detail_images') && is_null($request->input('detail_images'))) {
-                // Gérer le cas où on veut explicitement vider les images de détail
-                if ($product->detail_images && is_array($product->detail_images)) {
-                    foreach ($product->detail_images as $oldImage) {
-                       if($oldImage) {
-                           Storage::disk('public')->delete($oldImage);
-                       }
+        // Gérer la mise à jour des images de détail
+        if ($request->hasFile('detail_images')) {
+            // Supprimer les anciennes images de Cloudinary
+            if ($product->detail_images && is_array($product->detail_images)) {
+                foreach ($product->detail_images as $oldImage) {
+                    if (isset($oldImage['public_id'])) {
+                        Cloudinary::uploadApi()->destroy($oldImage['public_id']);
                     }
                 }
-                $validatedData['detail_images'] = null;
             }
+            
+            // Uploader les nouvelles images
+            $detailImages = [];
+            foreach ($request->file('detail_images') as $file) {
+                $path = $file->store('temp');
+                $fullPath = Storage::path($path);
+                $result = Cloudinary::uploadApi()->upload($fullPath, ['folder' => 'products/details']);
+                $detailImages[] = [
+                    'url' => $result['secure_url'],
+                    'public_id' => $result['public_id']
+                ];
+                Storage::delete($path);
+            }
+            $validatedData['detail_images'] = $detailImages;
+        } elseif ($request->has('detail_images') && is_null($request->input('detail_images'))) {
+            // Gérer le cas où on veut explicitement vider les images de détail
+            if ($product->detail_images && is_array($product->detail_images)) {
+                foreach ($product->detail_images as $oldImage) {
+                    if (isset($oldImage['public_id'])) {
+                        Cloudinary::uploadApi()->destroy($oldImage['public_id']);
+                    }
+                }
+            }
+            $validatedData['detail_images'] = null;
+        }
    
    
            $product->update($validatedData);
@@ -198,6 +248,23 @@ class ProductController extends Controller
     public function destroy(string $id)
     {
         $product = Product::findOrFail($id);
+        
+        // Supprimer les images de Cloudinary
+        if ($product->homepage_image_public_id) {
+            Cloudinary::uploadApi()->destroy($product->homepage_image_public_id);
+        }
+        
+        if ($product->logo_public_id) {
+            Cloudinary::uploadApi()->destroy($product->logo_public_id);
+        }
+        
+        if ($product->detail_images && is_array($product->detail_images)) {
+            foreach ($product->detail_images as $image) {
+                if (isset($image['public_id'])) {
+                    Cloudinary::uploadApi()->destroy($image['public_id']);
+                }
+            }
+        }
 
         // Supprimer les images associées avant de supprimer le produit
         if ($product->homepage_image) {
